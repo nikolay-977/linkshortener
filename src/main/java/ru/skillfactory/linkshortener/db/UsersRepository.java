@@ -2,6 +2,7 @@ package ru.skillfactory.linkshortener.db;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.skillfactory.linkshortener.exception.DatabaseException;
 import ru.skillfactory.linkshortener.model.User;
 
 import java.sql.Connection;
@@ -20,14 +21,16 @@ public class UsersRepository {
         this.connection = connection;
     }
 
-    public void addUser(User user) {
+    public User addUser(User user) {
         String sql = "INSERT INTO users (id, name) VALUES (?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setObject(1, UUID.fromString(user.getId()));
             pstmt.setString(2, user.getName());
             pstmt.executeUpdate();
+            return user;
         } catch (SQLException e) {
-            logger.error("Ошибка при добавлении пользователя.", e);
+            logger.error("Ошибка при добавлении пользователя.");
+            throw new DatabaseException("Ошибка при добавлении пользователя.", e);
         }
     }
 

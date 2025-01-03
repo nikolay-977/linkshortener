@@ -45,7 +45,7 @@ public class LinksRepository {
         return SERVICE_URL + shortUrl;
     }
 
-    public String redirect(String fullShortUrl, String userId) {
+    public Optional<Link> redirect(String fullShortUrl, String userId) {
         String shortUrl = fullShortUrl.replace(SERVICE_URL, "");
         String sql = "SELECT original_url, click_count, click_limit, created_at, life_time FROM links WHERE short_url = ? AND user_id = ?";
         PreparedStatement pstmt;
@@ -76,13 +76,12 @@ public class LinksRepository {
                 PreparedStatement updatePstmt = connection.prepareStatement(updateSql);
                 updatePstmt.setString(1, shortUrl);
                 updatePstmt.executeUpdate();
-                return originalUrl;
+                return Optional.of(new Link(shortUrl, originalUrl, userId));
             }
         } catch (SQLException e) {
             logger.error("Ошибка при перенаправлении по короткой ссылки.", e);
         }
-        System.out.println("Ссылка не найдена.");
-        return null;
+        return Optional.empty();
     }
 
     public Optional<Link> getLinkByShortUrlAndUserId(String fullShortUrl, String userId) {
