@@ -1,4 +1,4 @@
-package ru.skillfactory.linkshortener;
+package ru.skillfactory.linkshortener.model;
 
 import java.util.UUID;
 

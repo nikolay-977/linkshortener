@@ -1,4 +1,4 @@
-package ru.skillfactory.linkshortener;
+package ru.skillfactory.linkshortener.config;
 
 import java.io.IOException;
 import java.io.InputStream;

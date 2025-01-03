@@ -6,6 +6,7 @@ CREATE USER "user" WITH PASSWORD 'password';
 
 GRANT ALL PRIVILEGES ON DATABASE linkshortener TO "user";
 
+DROP TABLE users CASCADE;
 CREATE TABLE users (
     id UUID PRIMARY KEY,
     name VARCHAR(255) NOT NULL
@@ -13,6 +14,7 @@ CREATE TABLE users (
 
 GRANT ALL PRIVILEGES ON TABLE users TO "user";
 
+DROP TABLE links CASCADE;
 CREATE TABLE links (
                        short_url VARCHAR(6) PRIMARY KEY,
                        original_url TEXT NOT NULL,
@@ -20,7 +22,7 @@ CREATE TABLE links (
                        click_count INT DEFAULT 0,
                        click_limit INT NOT NULL,
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                       lifetime INT NOT NULL
+                       life_time INT NOT NULL
 );
 
 GRANT ALL PRIVILEGES ON TABLE links TO "user";

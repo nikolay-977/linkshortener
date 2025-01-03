@@ -1,44 +1,32 @@
-package ru.skillfactory.linkshortener;
+package ru.skillfactory.linkshortener.db;
 
-import java.sql.*;
+import ru.skillfactory.linkshortener.config.Config;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.text.MessageFormat;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import static ru.skillfactory.linkshortener.Main.SERVICE_URL;
+import static ru.skillfactory.linkshortener.service.LinkShortenerService.SERVICE_URL;
 
-public class LinkShortener {
+public class LinksRepository {
     private Connection connection;
 
-    public LinkShortener(Connection connection) {
+    public LinksRepository(Connection connection) {
         this.connection = connection;
     }
 
-    public void addUser(User user) throws SQLException {
-        String sql = "INSERT INTO users (id, name) VALUES (?, ?)";
-        PreparedStatement pstmt = connection.prepareStatement(sql);
-        pstmt.setObject(1, UUID.fromString(user.getId()));
-        pstmt.setString(2, user.getName());
-        pstmt.executeUpdate();
-
-    }
-
-    public User getUserByName(String name) throws SQLException {
-        String sql = "SELECT * FROM users WHERE name = ?";
-        PreparedStatement pstmt = connection.prepareStatement(sql);
-        pstmt.setString(1, name);
-        ResultSet rs = pstmt.executeQuery();
-        if (rs.next()) {
-            return new User(rs.getString("id"), rs.getString("name"));
-        }
-
-        return null;
-    }
-
-    public String createShortLink(String originalUrl, int clickLimit, String userId) {
+    public String createShortLink(String originalUrl, int clickLimit, int userLifeTime, String userId) {
         String shortUrl = UUID.randomUUID().toString().substring(0, 6);
-        long lifetime = TimeUnit.SECONDS.toMillis(24); // Устанавливаем время жизни ссылки в 24 часа
-        String sql = "INSERT INTO links (short_url, original_url, user_id, click_limit, lifetime, created_at) VALUES (?, ?, ?, ?, ?, ?)";
+        int configLifeTime = Config.getInstance().getLifeTime();
+        long lifeTimeHours = TimeUnit.HOURS.toMillis(Collections.min(Arrays.asList(userLifeTime, configLifeTime)));
+        String sql = "INSERT INTO links (short_url, original_url, user_id, click_limit, life_time, created_at) VALUES (?, ?, ?, ?, ?, ?)";
         PreparedStatement pstmt;
         try {
             pstmt = connection.prepareStatement(sql);
@@ -46,7 +34,7 @@ public class LinkShortener {
             pstmt.setString(2, originalUrl);
             pstmt.setObject(3, UUID.fromString(userId));
             pstmt.setInt(4, clickLimit);
-            pstmt.setLong(5, lifetime);
+            pstmt.setLong(5, lifeTimeHours);
             pstmt.setTimestamp(6, new Timestamp(System.currentTimeMillis())); // Устанавливаем текущее время
             pstmt.executeUpdate();
         } catch (SQLException e) {
@@ -58,7 +46,7 @@ public class LinkShortener {
 
     public String redirect(String fullShortUrl, String userId) {
         String shortUrl = fullShortUrl.replace(SERVICE_URL, "");
-        String sql = "SELECT original_url, click_count, click_limit, created_at, lifetime FROM links WHERE short_url = ? AND user_id = ?";
+        String sql = "SELECT original_url, click_count, click_limit, created_at, life_time FROM links WHERE short_url = ? AND user_id = ?";
         PreparedStatement pstmt;
         try {
             pstmt = connection.prepareStatement(sql);
@@ -71,7 +59,7 @@ public class LinkShortener {
                 int clickCount = rs.getInt("click_count");
                 int clickLimit = rs.getInt("click_limit");
                 long createdAt = rs.getTimestamp("created_at").getTime();
-                long lifetime = rs.getLong("lifetime");
+                long lifetime = rs.getLong("life_time");
 
                 // Проверяем, достигнут ли лимит переходов
                 if (clickCount >= clickLimit) {
@@ -111,6 +99,7 @@ public class LinkShortener {
             pstmt.setString(1, shortUrl);
             pstmt.setObject(2, UUID.fromString(userId));
             pstmt.executeUpdate();
+            System.out.println("Короткая ссылка удалена.");
         } catch (SQLException e) {
             System.out.println("Ошибка при удалени короткой ссылки.");
             throw new RuntimeException(e);
@@ -118,8 +107,8 @@ public class LinkShortener {
     }
 
     public void deleteExpiredLinks(String currentUserId) {
-        String selectSql = "SELECT short_url, user_id FROM links WHERE created_at + (lifetime * INTERVAL '1 millisecond') < CURRENT_TIMESTAMP";
-        String deleteSql = "DELETE FROM links WHERE created_at + (lifetime * INTERVAL '1 millisecond') < CURRENT_TIMESTAMP";
+        String selectSql = "SELECT short_url, user_id FROM links WHERE created_at + (life_time * INTERVAL '1 millisecond') < CURRENT_TIMESTAMP";
+        String deleteSql = "DELETE FROM links WHERE created_at + (life_time * INTERVAL '1 millisecond') < CURRENT_TIMESTAMP";
 
         try (PreparedStatement selectPstmt = connection.prepareStatement(selectSql);
              PreparedStatement deletePstmt = connection.prepareStatement(deleteSql)) {
@@ -140,6 +129,21 @@ public class LinkShortener {
         } catch (SQLException e) {
             System.out.println("Ошибка при удалении истекших ссылок.");
             throw new RuntimeException(e);
+        }
+    }
+
+    public boolean updateClickLimit(String fullShortUrl, int newClickLimit, String userId) {
+        String shortUrl = fullShortUrl.replace(SERVICE_URL, "");
+        String query = "UPDATE links SET click_limit = ? WHERE short_url = ? AND user_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setInt(1, newClickLimit);
+            statement.setString(2, shortUrl);
+            statement.setObject(3, UUID.fromString(userId));
+            int rowsUpdated = statement.executeUpdate();
+            return rowsUpdated > 0; // Возвращаем true, если обновление прошло успешно
+        } catch (SQLException e) {
+            System.out.println("Ошибка при обновлении лимита переходов: " + e.getMessage());
+            return false;
         }
     }
 }

@@ -1,4 +1,6 @@
-package ru.skillfactory.linkshortener;
+package ru.skillfactory.linkshortener.db;
+
+import ru.skillfactory.linkshortener.config.Config;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -17,8 +19,12 @@ public class DatabaseConnection {
         return instance;
     }
 
-    public Connection getConnection() throws SQLException {
+    public Connection getConnection() {
         Config config = Config.getInstance();
-        return DriverManager.getConnection(config.getDbUrl(), config.getDbUser(), config.getDbPassword());
+        try {
+            return DriverManager.getConnection(config.getDbUrl(), config.getDbUser(), config.getDbPassword());
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
