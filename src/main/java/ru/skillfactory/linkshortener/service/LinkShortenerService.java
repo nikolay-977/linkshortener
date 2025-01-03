@@ -7,7 +7,7 @@ import ru.skillfactory.linkshortener.db.DatabaseConnection;
 import ru.skillfactory.linkshortener.db.LinksRepository;
 import ru.skillfactory.linkshortener.db.UsersRepository;
 import ru.skillfactory.linkshortener.model.User;
-import ru.skillfactory.linkshortener.utils.DeletingExpiredLinksThread;
+import ru.skillfactory.linkshortener.utils.DeletingExpiredLinksScheduler;
 
 import java.awt.*;
 import java.io.IOException;
@@ -22,18 +22,18 @@ public class LinkShortenerService {
     public static final String SERVICE_URL = Config.getInstance().getServiceUrl();
     private static final Logger logger = LoggerFactory.getLogger(LinkShortenerService.class);
     private Scanner scanner;
-    private DeletingExpiredLinksThread deletingExpiredLinksThread;
+    private DeletingExpiredLinksScheduler deletingExpiredLinksScheduler;
 
     public LinkShortenerService() {
         Connection connection = DatabaseConnection.getInstance().getConnection();
         LinksRepository linksRepository = new LinksRepository(connection);
         UsersRepository usersRepository = new UsersRepository(connection);
-        deletingExpiredLinksThread = new DeletingExpiredLinksThread();
+        deletingExpiredLinksScheduler = new DeletingExpiredLinksScheduler(Config.getInstance().getCleanSchedulerInterval());
 
         scanner = new Scanner(System.in);
         String userId = getUser(usersRepository);
 
-        deletingExpiredLinksThread.startCleanup(linksRepository, userId);
+        deletingExpiredLinksScheduler.startCleanup(linksRepository, userId);
 
         while (true) {
             printMenu();
@@ -136,14 +136,14 @@ public class LinkShortenerService {
     }
 
     public String changeUser(LinksRepository linksRepository, UsersRepository usersRepository) {
-        deletingExpiredLinksThread.stopCleanup(); // Остановка текущего потока
+        deletingExpiredLinksScheduler.stopCleanup(); // Остановка текущего потока
         String userId = getUser(usersRepository); // Смена пользователя
-        deletingExpiredLinksThread.startCleanup(linksRepository, userId); // Запуск нового потока
+        deletingExpiredLinksScheduler.startCleanup(linksRepository, userId); // Запуск нового потока
         return userId;
     }
 
     public void exit() {
-        deletingExpiredLinksThread.stopCleanup(); // Остановка текущего потока
+        deletingExpiredLinksScheduler.stopCleanup(); // Остановка текущего потока
         System.out.println("Выход из программы.");
     }
 

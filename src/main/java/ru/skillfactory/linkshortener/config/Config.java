@@ -11,6 +11,7 @@ public class Config {
     private String dbPassword;
     private String serviceUrl;
     private int lifeTime;
+    private int cleanSchedulerInterval;
 
     private Config() {
         Properties properties = new Properties();
@@ -25,6 +26,7 @@ public class Config {
             dbPassword = properties.getProperty("db.password");
             serviceUrl = properties.getProperty("service.url");
             lifeTime = Integer.parseInt(properties.getProperty("life.time.hours"));
+            cleanSchedulerInterval = Integer.parseInt(properties.getProperty("clean.scheduler.interval"));
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -55,5 +57,9 @@ public class Config {
 
     public int getLifeTime() {
         return lifeTime;
+    }
+
+    public int getCleanSchedulerInterval() {
+        return cleanSchedulerInterval;
     }
 }
