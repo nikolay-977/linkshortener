@@ -1,5 +1,7 @@
 package ru.skillfactory.linkshortener.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.skillfactory.linkshortener.config.Config;
 import ru.skillfactory.linkshortener.db.DatabaseConnection;
 import ru.skillfactory.linkshortener.db.LinksRepository;
@@ -7,18 +9,18 @@ import ru.skillfactory.linkshortener.db.UsersRepository;
 import ru.skillfactory.linkshortener.model.User;
 import ru.skillfactory.linkshortener.utils.DeletingExpiredLinksThread;
 
-import java.awt.Desktop;
+import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Connection;
+import java.text.MessageFormat;
+import java.util.Optional;
 import java.util.Scanner;
 
-import static java.lang.System.in;
-
 public class LinkShortenerService {
-
     public static final String SERVICE_URL = Config.getInstance().getServiceUrl();
+    private static final Logger logger = LoggerFactory.getLogger(LinkShortenerService.class);
     private Scanner scanner;
     private DeletingExpiredLinksThread deletingExpiredLinksThread;
 
@@ -27,11 +29,10 @@ public class LinkShortenerService {
         LinksRepository linksRepository = new LinksRepository(connection);
         UsersRepository usersRepository = new UsersRepository(connection);
         deletingExpiredLinksThread = new DeletingExpiredLinksThread();
-        scanner = new Scanner(in);
 
+        scanner = new Scanner(System.in);
         String userId = getUser(usersRepository);
 
-        // Запуск потока для удаления истекших ссылок
         deletingExpiredLinksThread.startCleanup(linksRepository, userId);
 
         while (true) {
@@ -52,7 +53,7 @@ public class LinkShortenerService {
                     deleteShortLink(linksRepository, userId);
                     break;
                 case 5:
-                    changUser(linksRepository, usersRepository);
+                    userId = changeUser(linksRepository, usersRepository);
                     break;
                 case 6:
                     exit();
@@ -107,18 +108,17 @@ public class LinkShortenerService {
         } else {
             try {
                 Desktop.getDesktop().browse(new URI(redirectUrl));
-            } catch (IOException e) {
-                System.out.println("Ошибка при попытке открыть браузер.");
-                throw new RuntimeException(e);
             } catch (URISyntaxException e) {
-                System.out.println("Ошибка при парсинге URI.");
-                throw new RuntimeException(e);
+                logger.error("Ошибка при парсинге URI.", e);
+            } catch (IOException e) {
+                logger.error("Ошибка при попытке открыть браузер.", e);
             }
         }
     }
 
     public void changeClickLimit(LinksRepository linksRepository, String userId) {
         String shortLink = getShortLink(); // Получаем короткую ссылку
+
         System.out.print("Введите новый лимит переходов: ");
         int newClickLimit = getIntInput(); // Получаем новый лимит
 
@@ -135,10 +135,11 @@ public class LinkShortenerService {
         linksRepository.deleteLink(linkToDelete, userId);
     }
 
-    public void changUser(LinksRepository linksRepository, UsersRepository usersRepository) {
+    public String changeUser(LinksRepository linksRepository, UsersRepository usersRepository) {
         deletingExpiredLinksThread.stopCleanup(); // Остановка текущего потока
         String userId = getUser(usersRepository); // Смена пользователя
         deletingExpiredLinksThread.startCleanup(linksRepository, userId); // Запуск нового потока
+        return userId;
     }
 
     public void exit() {
@@ -148,21 +149,18 @@ public class LinkShortenerService {
 
     public String getUser(UsersRepository usersRepository) {
         System.out.print("Введите ваше имя пользователя: ");
-        String username = getValidUsername(); // Проверка имени пользователя
+        String username = getValidUsername();
 
-        // Проверяем, существует ли уже UUID для данного имени пользователя
+        Optional<User> userOpt = usersRepository.getUserByName(username);
         String userId;
-        User user = usersRepository.getUserByName(username);
-        if (user == null) {
-            // Если нет, создаем нового пользователя и сохраняем
+        if (userOpt.isPresent()) {
+            userId = userOpt.get().getId();
+            System.out.println(MessageFormat.format("Ваш ID пользователя: {0}", userId));
+        } else {
             User newUser = new User(username);
             usersRepository.addUser(newUser);
             userId = newUser.getId();
-            System.out.println("Ваш новый ID пользователя: " + userId);
-        } else {
-            userId = user.getId();
-            // Если существует, используем UUID
-            System.out.println("Ваш ID пользователя: " + userId);
+            System.out.println(MessageFormat.format("Ваш новый ID пользователя: {0}", userId));
         }
 
         return userId;
@@ -196,7 +194,6 @@ public class LinkShortenerService {
         System.out.print("Введите короткую ссылку: ");
         while (true) {
             String shortLink = scanner.nextLine();
-
             if (isValidShortLink(shortLink)) {
                 return shortLink;
             } else {
