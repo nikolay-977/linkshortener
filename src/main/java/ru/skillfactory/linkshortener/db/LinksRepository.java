@@ -2,11 +2,7 @@ package ru.skillfactory.linkshortener.db;
 
 import ru.skillfactory.linkshortener.config.Config;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collections;

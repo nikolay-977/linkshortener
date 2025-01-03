@@ -7,7 +7,7 @@ import java.util.Properties;
 public class Config {
     private static Config instance; // Единственный экземпляр класса
     private String dbUrl;
-    private String dbUser ;
+    private String dbUser;
     private String dbPassword;
     private String serviceUrl;
     private int lifeTime;
@@ -21,13 +21,14 @@ public class Config {
             }
             properties.load(input);
             dbUrl = properties.getProperty("db.url");
-            dbUser  = properties.getProperty("db.user");
+            dbUser = properties.getProperty("db.user");
             dbPassword = properties.getProperty("db.password");
             serviceUrl = properties.getProperty("service.url");
             lifeTime = Integer.parseInt(properties.getProperty("life.time.hours"));
         } catch (IOException ex) {
             ex.printStackTrace();
-        }    }
+        }
+    }
 
     public static Config getInstance() {
         if (instance == null) {
@@ -44,8 +45,8 @@ public class Config {
         return dbUrl;
     }
 
-    public String getDbUser () {
-        return dbUser ;
+    public String getDbUser() {
+        return dbUser;
     }
 
     public String getDbPassword() {

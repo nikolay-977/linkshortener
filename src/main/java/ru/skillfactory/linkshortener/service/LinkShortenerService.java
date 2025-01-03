@@ -1,34 +1,38 @@
 package ru.skillfactory.linkshortener.service;
 
-import ru.skillfactory.linkshortener.db.DatabaseConnection;
-import ru.skillfactory.linkshortener.model.User;
 import ru.skillfactory.linkshortener.config.Config;
+import ru.skillfactory.linkshortener.db.DatabaseConnection;
 import ru.skillfactory.linkshortener.db.LinksRepository;
 import ru.skillfactory.linkshortener.db.UsersRepository;
+import ru.skillfactory.linkshortener.model.User;
+import ru.skillfactory.linkshortener.utils.DeletingExpiredLinksThread;
 
-import java.awt.*;
+import java.awt.Desktop;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.util.Scanner;
 
-import static ru.skillfactory.linkshortener.utils.DeletingExpiredLinksUtil.startCleanupThread;
-import static ru.skillfactory.linkshortener.utils.DeletingExpiredLinksUtil.stopCleanupThread;
+import static java.lang.System.in;
 
 public class LinkShortenerService {
 
     public static final String SERVICE_URL = Config.getInstance().getServiceUrl();
-    private Scanner scanner = new Scanner(System.in);
+    private Scanner scanner;
+    private DeletingExpiredLinksThread deletingExpiredLinksThread;
 
     public LinkShortenerService() {
         Connection connection = DatabaseConnection.getInstance().getConnection();
         LinksRepository linksRepository = new LinksRepository(connection);
         UsersRepository usersRepository = new UsersRepository(connection);
+        deletingExpiredLinksThread = new DeletingExpiredLinksThread();
+        scanner = new Scanner(in);
+
         String userId = getUser(usersRepository);
 
         // Запуск потока для удаления истекших ссылок
-        startCleanupThread(linksRepository, userId);
+        deletingExpiredLinksThread.startCleanup(linksRepository, userId);
 
         while (true) {
             printMenu();
@@ -67,6 +71,22 @@ public class LinkShortenerService {
         System.out.println("5. Сменить пользователя");
         System.out.println("6. Выйти из программы");
         System.out.print("Выберите действие: ");
+    }
+
+    private static boolean isValidUrl(String url) {
+        // Простейшая проверка URL
+        String urlRegex = "^(http://|https://)?([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})(:[0-9]{1,5})?(/.*)?$";
+        return url != null && url.matches(urlRegex);
+    }
+
+    private static boolean isValidShortLink(String shortLink) {
+        // Проверяем, что короткая ссылка не null, не пустая и соответствует формату
+        int serviceUrlLength = SERVICE_URL.length(); // Длина SERVICE_URL
+        int fullShortLinkLength = serviceUrlLength + 6; // Длина SERVICE_URL + 6 символов
+        return shortLink != null &&
+                shortLink.startsWith(SERVICE_URL) &&
+                shortLink.length() == fullShortLinkLength &&
+                shortLink.substring(serviceUrlLength).matches("^[a-zA-Z0-9]+$"); // Проверка на наличие только букв и цифр после SERVICE_URL
     }
 
     public void createShortLink(LinksRepository linksRepository, String userId) {
@@ -116,13 +136,13 @@ public class LinkShortenerService {
     }
 
     public void changUser(LinksRepository linksRepository, UsersRepository usersRepository) {
-        stopCleanupThread(); // Остановка текущего потока
+        deletingExpiredLinksThread.stopCleanup(); // Остановка текущего потока
         String userId = getUser(usersRepository); // Смена пользователя
-        startCleanupThread(linksRepository, userId); // Запуск нового потока
+        deletingExpiredLinksThread.startCleanup(linksRepository, userId); // Запуск нового потока
     }
 
-    public static void exit() {
-        stopCleanupThread(); // Остановка текущего потока
+    public void exit() {
+        deletingExpiredLinksThread.stopCleanup(); // Остановка текущего потока
         System.out.println("Выход из программы.");
     }
 
@@ -183,22 +203,6 @@ public class LinkShortenerService {
                 System.out.println("Некорректная короткая ссылка. Пожалуйста, введите действительную короткую ссылку:");
             }
         }
-    }
-
-    private static boolean isValidUrl(String url) {
-        // Простейшая проверка URL
-        String urlRegex = "^(http://|https://)?([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})(:[0-9]{1,5})?(/.*)?$";
-        return url != null && url.matches(urlRegex);
-    }
-
-    private static boolean isValidShortLink(String shortLink) {
-        // Проверяем, что короткая ссылка не null, не пустая и соответствует формату
-        int serviceUrlLength = SERVICE_URL.length(); // Длина SERVICE_URL
-        int fullShortLinkLength = serviceUrlLength + 6; // Длина SERVICE_URL + 6 символов
-        return shortLink != null &&
-                shortLink.startsWith(SERVICE_URL) &&
-                shortLink.length() == fullShortLinkLength &&
-                shortLink.substring(serviceUrlLength).matches("^[a-zA-Z0-9]+$"); // Проверка на наличие только букв и цифр после SERVICE_URL
     }
 
     public int getIntInput() {

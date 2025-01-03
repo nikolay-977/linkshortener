@@ -1,25 +1,24 @@
-
 plugins {
-	id 'java'
+    id 'java'
 }
 
 group = 'ru.skillfactory'
 version = '0.0.1-SNAPSHOT'
 
 java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
-	}
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	implementation 'org.postgresql:postgresql:42.5.0'
+    implementation 'org.postgresql:postgresql:42.5.0'
 }
 
 tasks.withType(JavaCompile) {
-	options.encoding = 'UTF-8'
+    options.encoding = 'UTF-8'
 }
