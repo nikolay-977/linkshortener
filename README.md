@@ -58,8 +58,10 @@ psql postgres -f src/main/resources/setup.sql
 
 Создайте файл `application.properties` в каталоге  resources проекта с содержимым:
 
+```
 service.url=clck.ru/
 db.url=jdbc:postgresql://localhost:5432/linkshortener
 db.user=user
 db.password=password
 life.time.hours=24
+```
