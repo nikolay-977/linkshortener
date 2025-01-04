@@ -7,8 +7,6 @@ import ru.skillfactory.linkshortener.model.Link;
 
 import java.sql.*;
 import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;

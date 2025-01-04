@@ -10,7 +10,7 @@ import ru.skillfactory.linkshortener.service.LinkShortenerService;
 import ru.skillfactory.linkshortener.service.UserService;
 import ru.skillfactory.linkshortener.utils.DeletingExpiredLinksScheduler;
 
-import java.awt.Desktop;
+import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
