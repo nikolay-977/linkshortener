@@ -25,3 +25,8 @@ dependencies {
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
+
+
+application {
+    mainClassName = 'ru.skillfactory.linkshortener.Main'
+}
