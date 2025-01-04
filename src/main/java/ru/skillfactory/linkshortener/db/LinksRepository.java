@@ -24,10 +24,13 @@ public class LinksRepository {
         this.connection = connection;
     }
 
-    public String createShortLink(String originalUrl, int clickLimit, int userLifeTime, String userId) {
+    public String createShortLink(String originalUrl, int userClickLimit, int userLifeTime, String userId) {
         String shortUrl = UUID.randomUUID().toString().substring(0, 6);
         int configLifeTime = Config.getInstance().getLifeTime();
-        long lifeTimeHours = TimeUnit.HOURS.toMillis(Collections.min(Arrays.asList(userLifeTime, configLifeTime)));
+        int configClickLimit = Config.getInstance().getClickLimit();
+        long lifeTimeHours = TimeUnit.HOURS.toMillis(Math.min(userLifeTime, configLifeTime));
+        int clickLimit = Math.max(userClickLimit, configClickLimit);
+
         String sql = "INSERT INTO links (short_url, original_url, user_id, click_limit, life_time, created_at) VALUES (?, ?, ?, ?, ?, ?)";
         PreparedStatement pstmt;
         try {
@@ -143,12 +146,14 @@ public class LinksRepository {
         }
     }
 
-    public boolean updateClickLimit(String fullShortUrl, int newClickLimit, String userId) {
+    public boolean updateClickLimit(String fullShortUrl, int userClickLimit, String userId) {
         String shortUrl = fullShortUrl.replace(SERVICE_URL, "");
         getLinkByShortUrlAndUserId(fullShortUrl, userId);
+        int configClickLimit = Config.getInstance().getClickLimit();
+        int clickLimit = Math.max(userClickLimit, configClickLimit);
         String query = "UPDATE links SET click_limit = ? WHERE short_url = ? AND user_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(query)) {
-            statement.setInt(1, newClickLimit);
+            statement.setInt(1, clickLimit);
             statement.setString(2, shortUrl);
             statement.setObject(3, UUID.fromString(userId));
             int rowsUpdated = statement.executeUpdate();
