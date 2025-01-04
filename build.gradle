@@ -28,5 +28,5 @@ tasks.withType(JavaCompile) {
 
 
 application {
-    mainClassName = 'ru.skillfactory.linkshortener.Main'
+    mainClassName = 'ru.skillfactory.linkshortener.LinkShortenerApp'
 }

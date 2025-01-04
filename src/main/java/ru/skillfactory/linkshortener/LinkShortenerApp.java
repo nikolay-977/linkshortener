@@ -1,4 +1,4 @@
-package ru.skillfactory.linkshortener.console;
+package ru.skillfactory.linkshortener;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,15 +20,15 @@ import java.util.Scanner;
 
 import static ru.skillfactory.linkshortener.service.LinkShortenerService.SERVICE_URL;
 
-public class LinkShortenerConsole {
-    private static final Logger logger = LoggerFactory.getLogger(LinkShortenerConsole.class);
+public class LinkShortenerApp {
+    private static final Logger logger = LoggerFactory.getLogger(LinkShortenerApp.class);
     private LinkShortenerService linkShortenerService;
     private Scanner scanner;
     private String userId;
     private UserService userService;
     private DeletingExpiredLinksScheduler deletingExpiredLinksScheduler;
 
-    public LinkShortenerConsole() {
+    public LinkShortenerApp() {
         this.scanner = new Scanner(System.in);
         Connection connection = DatabaseConnection.getInstance().getConnection();
         UsersRepository usersRepository = new UsersRepository(connection);
@@ -36,9 +36,6 @@ public class LinkShortenerConsole {
         userService = new UserService(usersRepository);
         linkShortenerService = new LinkShortenerService(linksRepository);
         deletingExpiredLinksScheduler = new DeletingExpiredLinksScheduler(linksRepository);
-        userId = getUser();
-        deletingExpiredLinksScheduler.startCleanup(userId);
-        getMenu();
     }
 
     private static void printMenu() {
@@ -67,7 +64,9 @@ public class LinkShortenerConsole {
         return url != null && url.matches(urlRegex);
     }
 
-    private void getMenu() {
+    private void start() {
+        userId = getUser();
+        deletingExpiredLinksScheduler.startCleanup(userId);
         while (true) {
             printMenu();
             int choice = getIntInput();
@@ -204,5 +203,10 @@ public class LinkShortenerConsole {
     public void deleteShortLink() {
         String linkToDelete = getShortLink(); // Проверка короткой ссылки
         linkShortenerService.deleteShortLink(linkToDelete, userId);
+    }
+
+    public static void main(String[] args) {
+        LinkShortenerApp app = new LinkShortenerApp();
+        app.start();
     }
 }
